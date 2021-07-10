@@ -9,3 +9,9 @@ scikit-image==0.17.2
 scipy==1.4.1
 tqdm
 imgaug
+albumentations
+iglovikov_helper_functions
+pytorch_lightning
+pytorch_toolbelt
+segmentation-models-pytorch
+tqdm
