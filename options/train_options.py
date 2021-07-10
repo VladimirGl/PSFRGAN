@@ -35,6 +35,7 @@ class TrainOptions(BaseOptions):
         parser.add_argument('--lr_policy', type=str, default='step', help='learning rate policy. [linear | step | plateau | cosine]')
         parser.add_argument('--lr_decay_iters', type=int, default=50, help='multiply by a gamma every lr_decay_iters iterations')
         parser.add_argument('--lr_decay_gamma', type=float, default=1, help='multiply by a gamma every lr_decay_iters iterations')
+        parser.add_argument('--config_path', type=str, default='configs/celeba_parsing.yaml', help='path to config to load augs / other params')
 
         self.isTrain = True
  

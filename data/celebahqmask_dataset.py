@@ -4,6 +4,7 @@ import numpy as np
 from PIL import Image
 import imgaug as ia
 import imgaug.augmenters as iaa
+from iglovikov_helper_functions.utils.image_utils import load_rgb, load_grayscale
 
 from data.image_folder import make_dataset
 
@@ -18,20 +19,19 @@ from data.ffhq_dataset import complex_imgaug, random_gray
 
 class CelebAHQMaskDataset(BaseDataset):
 
-    def __init__(self, opt):
+    def __init__(self, opt, transform, deg_transform, hr_transform):
         BaseDataset.__init__(self, opt)
         self.img_size = opt.Pimg_size
         self.lr_size = opt.Gin_size
         self.hr_size = opt.Gout_size
         self.shuffle = True if opt.isTrain else False 
 
-        self.img_dataset = sorted(make_dataset(os.path.join(opt.dataroot, 'CelebA-HQ-img')))
-        self.mask_dataset = sorted(make_dataset(os.path.join(opt.dataroot, 'CelebAMask-HQ-mask')))
+        self.transform = transform
+        self.deg_transform = deg_transform
+        self.hr_transform = hr_transform
 
-        self.to_tensor = transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-                ])
+        self.img_dataset = sorted(make_dataset(os.path.join(opt.dataroot, 'images')))
+        self.mask_dataset = sorted(make_dataset(os.path.join(opt.dataroot, 'labels')))
 
     def __len__(self,):
         return len(self.img_dataset)
@@ -40,21 +40,29 @@ class CelebAHQMaskDataset(BaseDataset):
         sample = {}
         img_path = self.img_dataset[idx]
         mask_path = self.mask_dataset[idx]
-        hr_img = Image.open(img_path).convert('RGB')
-        mask_img = Image.open(mask_path)
-                    
-        hr_img = hr_img.resize((self.hr_size, self.hr_size))
-        hr_img = random_gray(hr_img, p=0.3)
-        scale_size = np.random.randint(32, 256)
-        lr_img = complex_imgaug(hr_img, self.img_size, scale_size)
 
-        mask_img = mask_img.resize((self.hr_size, self.hr_size))
-        mask_label = torch.tensor(np.array(mask_img)).long()
- 
-        hr_tensor = self.to_tensor(hr_img)
-        lr_tensor = self.to_tensor(lr_img)
+        image = load_rgb(image_path, lib="cv2")
+        mask = load_grayscale(mask_path)
+        sample = self.transform(image=image, mask=mask)
 
-        return {'HR': hr_tensor, 'LR': lr_tensor, 'HR_paths': img_path, 'Mask': mask_label}
+        # apply augmentations
+        sample = self.transform(image=image, mask=mask)
+        image, mask = sample["image"], sample["mask"]
 
+        hr_sample = self.hr_transform(image=image, mask=mask)
+        hr_image, hr_mask = hr_sample["image"], hr_sample["mask"]
 
+        if self.deg_transform is not None:
+            degraded_sample = self.deg_transform(image=image, mask=mask)
+            degraded_image, degraded_mask = degraded_sample["image"], degraded_sample["mask"]
+        else:
+            degraded_image = hr_image
+            degraded_mask = hr_mask
 
+        hr_mask = torch.from_numpy(hr_mask)
+        return {
+            "HR_paths": img_path,
+            "HR": image_to_tensor(hr_image),
+            "Mask": torch.unsqueeze(hr_mask, 0).float(),
+            "LR": image_to_tensor(degraded_image),
+        }

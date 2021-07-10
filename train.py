@@ -5,14 +5,24 @@ from utils import utils
 from options.train_options import TrainOptions
 from data import create_dataset
 from models import create_model
+from data.celebahqmask_dataset import CelebAHQMaskDataset
 
+import yaml
 import torch 
 import os
 import torch.multiprocessing as mp
+from albumentations.core.serialization import from_dict
+
 
 def train(opt):
-    
-    dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
+    with open(opt.config_path) as f:
+        hparams = yaml.load(f, Loader=yaml.SafeLoader)
+
+    train_aug = from_dict(hparams["train_aug"])
+    degrd_aug = from_dict(hparams["degradation_aug"])
+    hr_aug = from_dict(hparams["hr_aug"])
+
+    dataset = CelebAHQMaskDataset(opt, train_aug, degrd_aug, hr_aug)  # create a dataset given opt.dataset_mode and other options
     dataset_size = len(dataset)    # get the number of images in the dataset.
     print('The number of training images = %d' % dataset_size)
 
