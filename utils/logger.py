@@ -6,6 +6,7 @@ from tensorboardX import SummaryWriter
 from datetime import datetime
 import socket
 import shutil
+import cv2
 
 class Logger():
     def __init__(self, opts):
@@ -68,6 +69,7 @@ class Logger():
             tmp_imgs = [x[i] for x in visuals]
             imgs.append(np.hstack(tmp_imgs))
         imgs = np.vstack(imgs).astype(np.uint8)
+        cv2.imwrite(self.log_dir + '/' + tag + '_' + str(self.cur_iter) + '.jpg', imgs)
         self.writer.add_image(tag, imgs, self.cur_iter, dataformats='HWC')
 
     def record_text(self, tag, text):

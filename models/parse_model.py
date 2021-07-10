@@ -51,7 +51,7 @@ class ParseModel(BaseModel):
             print('ParseNet output shape', self.pred_Parse.shape, self.img_SR.shape)
 
     def backward(self):
-        self.loss_P = self.criterionParse(self.pred_Parse, self.gt_Parse) * self.opt.parse_map
+        self.loss_P = self.criterionParse(self.pred_Parse, self.gt_Parse.squeeze(1)) * self.opt.parse_map
         self.loss_SR = self.criterionSR(self.img_SR, self.img_HR) * self.opt.parse_sr
 
         loss = self.loss_P + self.loss_SR
@@ -62,7 +62,7 @@ class ParseModel(BaseModel):
         self.backward()              # calculate gradients for network G
         self.optimizer.step()
 
-    def get_current_visuals(self, size=512):
+    def get_current_visuals(self, size=256):
         out = []
         visual_imgs = []
         out.append(utils.tensor_to_numpy(self.img_LR))
@@ -73,7 +73,7 @@ class ParseModel(BaseModel):
         visual_imgs.append(out_imgs[0])
         visual_imgs.append(out_imgs[1])
         visual_imgs.append(utils.color_parse_map(self.pred_Parse))
-        visual_imgs.append(utils.color_parse_map(self.gt_Parse.unsqueeze(1)))
+        visual_imgs.append(utils.color_parse_map(self.gt_Parse.squeeze(0)))
         visual_imgs.append(out_imgs[2])
 
         return visual_imgs

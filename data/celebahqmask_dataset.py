@@ -16,6 +16,8 @@ from data.base_dataset import BaseDataset
 from utils.utils import onehot_parse_map
 
 from data.ffhq_dataset import complex_imgaug, random_gray
+from pytorch_toolbelt.utils.torch_utils import image_to_tensor
+
 
 class CelebAHQMaskDataset(BaseDataset):
 
@@ -41,7 +43,7 @@ class CelebAHQMaskDataset(BaseDataset):
         img_path = self.img_dataset[idx]
         mask_path = self.mask_dataset[idx]
 
-        image = load_rgb(image_path, lib="cv2")
+        image = load_rgb(img_path, lib="cv2")
         mask = load_grayscale(mask_path)
         sample = self.transform(image=image, mask=mask)
 
@@ -63,6 +65,6 @@ class CelebAHQMaskDataset(BaseDataset):
         return {
             "HR_paths": img_path,
             "HR": image_to_tensor(hr_image),
-            "Mask": torch.unsqueeze(hr_mask, 0).float(),
+            "Mask": torch.unsqueeze(hr_mask, 0).long(),
             "LR": image_to_tensor(degraded_image),
         }

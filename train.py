@@ -6,13 +6,14 @@ from options.train_options import TrainOptions
 from data import create_dataset
 from models import create_model
 from data.celebahqmask_dataset import CelebAHQMaskDataset
+from models.networks import MParseNet
 
 import yaml
 import torch 
 import os
 import torch.multiprocessing as mp
 from albumentations.core.serialization import from_dict
-
+from torch.utils.data import DataLoader
 
 def train(opt):
     with open(opt.config_path) as f:
@@ -24,11 +25,16 @@ def train(opt):
 
     dataset = CelebAHQMaskDataset(opt, train_aug, degrd_aug, hr_aug)  # create a dataset given opt.dataset_mode and other options
     dataset_size = len(dataset)    # get the number of images in the dataset.
+    dataloader = DataLoader(dataset, batch_size=opt.batch_size, num_workers=16, shuffle=True, pin_memory=True, drop_last=True)
+    dataloader_size = len(dataloader)
     print('The number of training images = %d' % dataset_size)
 
     model = create_model(opt)
     model.setup(opt)
-        
+
+    mparse_model = MParseNet(hparams["model"]).cuda()
+    model.netP = mparse_model
+    
     logger = Logger(opt)
     timer = Timer()
 
@@ -38,7 +44,7 @@ def train(opt):
     start_iter = opt.resume_iter
     print('Start training from epoch: {:05d}; iter: {:07d}'.format(opt.resume_epoch, opt.resume_iter))
     for epoch in range(opt.resume_epoch, opt.total_epochs + 1):    
-        for i, data in enumerate(dataset, start=start_iter):
+        for i, data in enumerate(dataloader, start=start_iter):
             cur_iters += 1
             logger.set_current_iter(cur_iters)
             # =================== load data ===============

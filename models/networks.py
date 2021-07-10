@@ -10,6 +10,7 @@ from models import psfrnet
 import torch.nn.utils as tutils
 from models.loss import PCPFeat
 
+from iglovikov_helper_functions.config_parsing.utils import object_from_dict
 
 def apply_norm(net, weight_norm_type):
     for m in net.modules():
@@ -135,6 +136,23 @@ def define_D(opt, in_channel=3, isTrain=True, use_norm='none'):
         net = torch.nn.DataParallel(net, opt.gpu_ids, output_device=opt.device)
     init_weights(net, init_type='normal', init_gain=0.02)
     return net
+
+
+class MParseNet(nn.Module):
+    def __init__(self, model_dict):
+        super().__init__()
+        self.model = object_from_dict(model_dict)
+        self.model.segmentation_head = torch.nn.Identity()
+        
+        self.out_img_conv = ConvLayer(16, 3)
+        self.out_mask_conv = ConvLayer(16, 11)
+                
+    def forward(self, x):
+        x = self.model(x)
+        out_img = self.out_img_conv(x) 
+        out_mask = self.out_mask_conv(x)
+        return out_mask, out_img
+        
 
 
 class ParseNet(nn.Module):
